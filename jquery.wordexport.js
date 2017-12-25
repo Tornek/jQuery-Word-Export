@@ -8,22 +8,37 @@
  * @requires FileSaver.js
  */
 (function($){
-	$.fn.wordExport = function(fileName){
-		fileName = typeof fileName !== 'undefined' ? fileName : "jQuery-Word-Export";
-		var mhtml= {
+	var defaultParam = {
+		fileName: 'jQuery-Word-Export',
+		styles: {
+			'@page': {
+				size: '21cm 29.7cmt',
+				margin: '1cm 1cm 1cm 1cm',
+				'mso-page-orientation': 'portrait'
+			},
+			'div.Section1': {page: 'Section1'}
+		},
+		imageOptions: {
+			maxWidth: 624
+		}
+	};
+	
+	$.fn.wordExport = function(params){
+		params = $.extend(true, defaultParam, params);
+		
+		var mhtml = {
 				top: "Mime-Version: 1.0\nContent-Base: " + location.href + "\nContent-Type: Multipart/related; boundary=\"NEXT.ITEM-BOUNDARY\";type=\"text/html\"\n\n--NEXT.ITEM-BOUNDARY\nContent-Type: text/html; charset=\"utf-8\"\nContent-Location: " + location.href + "\n\n<!DOCTYPE html>\n<html>\n_html_</html>",
 				head: "<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<style>\n_styles_\n</style>\n</head>\n",
 				body: "<body>_body_</body>"
 			},
-			options = {
-				maxWidth: 624
-			},
 			// Clone selected element before manipulating it
-			markup = $(this).clone();
+			markup = $(this).clone(),
+			stylesInLine = '';
 		
 		// Remove hidden elements from the output
 		markup.each(function(){
 			var self = $(this);
+			
 			if(self.is(':hidden'))
 				self.remove();
 		});
@@ -36,7 +51,7 @@
 		
 		for(var i = 0; i < img.length; i++){
 			// Calculate dimensions of output image
-			var w = Math.min(img[i].width, options.maxWidth),
+			var w = Math.min(img[i].width, params.imageOptions.maxWidth),
 				h = img[i].height * (w / img[i].width),
 				// Create canvas for converting image to data URL
 				canvas = document.createElement("CANVAS");
@@ -69,14 +84,21 @@
 		}
 		mhtmlBottom += "--NEXT.ITEM-BOUNDARY--";
 		
-		//TODO: load css from included stylesheet
-		var styles = "",
-			// Aggregate parts of the file together
-			fileContent = mhtml.top.replace("_html_", mhtml.head.replace("_styles_", styles) + mhtml.body.replace("_body_", markup.html())) + mhtmlBottom,
+		$.each(params.styles, function(selector){
+			stylesInLine += selector + ' {\n';
+			
+			$.each(params.styles[selector], function(item){
+				stylesInLine += item + ': ' + params.styles[selector][item] + ';\n';
+			});
+			stylesInLine += '}\n';
+		});
+		
+		// Aggregate parts of the file together
+		var fileContent = mhtml.top.replace("_html_", mhtml.head.replace("_styles_", stylesInLine) + mhtml.body.replace("_body_", markup.html())) + mhtmlBottom,
 			// Create a Blob with the file contents
 			blob = new Blob([fileContent], {
 				type: "application/msword;charset=utf-8"
 			});
-		saveAs(blob, fileName + ".doc");
+		saveAs(blob, params.fileName + ".doc");
 	};
 })(jQuery);
