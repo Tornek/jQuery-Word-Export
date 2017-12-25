@@ -14,9 +14,14 @@
 			'@page': {
 				size: '21cm 29.7cmt',
 				margin: '1cm 1cm 1cm 1cm',
-				'mso-page-orientation': 'portrait'
+				'mso-page-orientation': 'portrait',
+				'mso-header': 'h1',
+				'mso-footer': 'f1'
 			},
-			'div.Section1': {page: 'Section1'}
+			'div.Section1': {page: 'Section1'},
+			'table#systemElems': {
+				margin: '0in 0in 0in 9in'
+			}
 		},
 		imageOptions: {
 			maxWidth: 624
@@ -27,25 +32,38 @@
 		params = $.extend(true, defaultParam, params);
 		
 		var mhtml = {
-				top: "Mime-Version: 1.0\nContent-Base: " + location.href + "\nContent-Type: Multipart/related; boundary=\"NEXT.ITEM-BOUNDARY\";type=\"text/html\"\n\n--NEXT.ITEM-BOUNDARY\nContent-Type: text/html; charset=\"utf-8\"\nContent-Location: " + location.href + "\n\n<!DOCTYPE html>\n<html>\n_html_</html>",
-				head: "<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<style>\n_styles_\n</style>\n</head>\n",
-				body: "<body>_body_</body>"
+				top: "Mime-Version: 1.0\nContent-Type: Multipart/related; boundary=\"----=_NextPart_ZROIIZO.ZCZYUACXV.ZARTUI\"\n\n------=_NextPart_ZROIIZO.ZCZYUACXV.ZARTUI\nContent-Type: text/html; charset=\"utf-8\"\nContent-Location: " + location.href + "\n\n<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>\n_html_</html>",
+				head: "<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\n<style>\n<!--\n_styles_-->\n</style>\n</head>\n",
+				body: "<body><div class='Section1'>_body_</div><table id='systemElems' border='1' cellspacing='0' cellpadding='0'><tr><td>_h1_</td></tr><tr><td>_f1_</td></tr></table></body>"
 			},
 			// Clone selected element before manipulating it
-			markup = $(this).clone(),
+			$markup = $(this).clone(),
 			stylesInLine = '';
 		
 		// Remove hidden elements from the output
-		markup.each(function(){
+		$markup.each(function(){
 			var self = $(this);
 			
 			if(self.is(':hidden'))
 				self.remove();
 		});
 		
+		if($markup.find('#h1').length){
+			var $header = $markup.find('#h1');
+			
+			mhtml.body = mhtml.body.replace("_h1_", $header.get(0).outerHTML);
+			$header.remove();
+		}
+		if($markup.find('#f1').length){
+			var $footer = $markup.find('#f1');
+			
+			mhtml.body = mhtml.body.replace("_f1_", $footer.get(0).outerHTML);
+			$footer.remove();
+		}
+		
 		// Embed all images using Data URLs
 		var images = [],
-			img = markup.find('img'),
+			img = $markup.find('img'),
 			// Prepare bottom of mhtml file with image data
 			mhtmlBottom = "\n";
 		
@@ -76,13 +94,14 @@
 				data: uri.substring(uri.indexOf(",") + 1)
 			};
 			
-			mhtmlBottom += "--NEXT.ITEM-BOUNDARY\n";
+			mhtmlBottom += "------=_NextPart_ZROIIZO.ZCZYUACXV.ZARTUI\n";
 			mhtmlBottom += "Content-Location: " + images[i].location + "\n";
 			mhtmlBottom += "Content-Type: " + images[i].type + "\n";
 			mhtmlBottom += "Content-Transfer-Encoding: " + images[i].encoding + "\n\n";
 			mhtmlBottom += images[i].data + "\n\n";
 		}
-		mhtmlBottom += "--NEXT.ITEM-BOUNDARY--";
+		//The bottom of bound
+		mhtmlBottom += "------=_NextPart_ZROIIZO.ZCZYUACXV.ZARTUI--";
 		
 		$.each(params.styles, function(selector){
 			stylesInLine += selector + ' {\n';
@@ -94,11 +113,12 @@
 		});
 		
 		// Aggregate parts of the file together
-		var fileContent = mhtml.top.replace("_html_", mhtml.head.replace("_styles_", stylesInLine) + mhtml.body.replace("_body_", markup.html())) + mhtmlBottom,
+		var fileContent = mhtml.top.replace("_html_", mhtml.head.replace("_styles_", stylesInLine) + mhtml.body.replace("_body_", $markup.html())) + mhtmlBottom,
 			// Create a Blob with the file contents
 			blob = new Blob([fileContent], {
 				type: "application/msword;charset=utf-8"
 			});
+		
 		saveAs(blob, params.fileName + ".doc");
 	};
 })(jQuery);
