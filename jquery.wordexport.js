@@ -1,6 +1,6 @@
 /* 
  * jQuery.fn.wordExport
- * @version 0.1 (2012-12-16)
+ * @version 0.2 (2012-12-16)
  * 
  * @desc Convert html code to word file (.doc)
  * 
